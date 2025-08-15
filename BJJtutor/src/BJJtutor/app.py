@@ -37,6 +37,8 @@ class BJJtutor(toga.App):
         root.add(self.content_area)
         root.add(bar)
 
+        # container for the notes
+        self.entries = []
 
         self.main_window = toga.MainWindow(title='Profile')
         self.main_window.content = root
@@ -50,19 +52,28 @@ class BJJtutor(toga.App):
                             children = [toga.Label('Profile & Stats')])
     
         # method for btn to make a new diary entry
-    def make_newnotes_page (self):
-        todays_date = datetime.date.today().strftime("%d.%m.%Y")
+    def make_newnotes_page (self, init_topic=None, init_notes=None, init_date=None):
+        topic = (init_topic or "")
+        notes = (init_notes or "")
+        date = (init_date or "")
+        
+        # if this is a fresh entry, set todays date, otherwise use the given parameter
+        if not init_topic and not init_notes:
+            date = datetime.date.today().strftime("%d.%m.%Y")
 
+        # the content itself
         back_btn = toga.Button(style=Pack(flex=0, margin=8),
                                text="Back",  
                                 on_press = lambda w: self.show_page("diary"))
         
         self.topic = toga.TextInput(style=Pack(flex=1, font_weight="bold", font_size=14, margin=8), 
-                                placeholder="What was the topic of todays trainings?")
+                                placeholder="What was the topic of todays trainings?",
+                                value=topic)
         self.date_field = toga.TextInput(style=Pack(flex=0, margin=8), 
-                                    value=todays_date)                        
+                                    value=date)                        
         self.new_notes = toga.MultilineTextInput(style = Pack(flex=5, margin=8), 
-                                    placeholder = "What did you learn on the mats today?")
+                                    placeholder = "What did you learn on the mats today?",
+                                    value=notes)
         
         save_btn = toga.Button(style=Pack(flex=0, margin=8), 
                                text="Save",
@@ -82,11 +93,15 @@ class BJJtutor(toga.App):
             self.old_notes_box.clear()
             self.no_notes = False
 
-        new_entry_topic = toga.TextInput(value=saved_topic, 
-                                         style=Pack(flex=1, margin=4, font_weight="bold"))
+        # Saves notes and date as text that user cant edit, unless the user presses the topic -> summons new_notes_page with saved vals21mm
+        new_entry_topic = toga.Button(text=saved_topic, 
+                                         style=Pack(flex=1, margin=4, font_weight="bold"),
+                                         on_press = lambda w: self.show_page("new notes", saved_topic, saved_notes, saved_date))
         new_entry_date = toga.TextInput(value=saved_date, 
+                                        readonly=True,
                                         style=Pack(flex=0, margin=4))
-        new_entry_notes = toga.MultilineTextInput(value=saved_notes, 
+        new_entry_notes = toga.MultilineTextInput(value=saved_notes,
+                                                  readonly=True, 
                                                   style=Pack(flex=5, margin=4))
 
         new_entry = toga.Box(style=Pack(direction=COLUMN, padding=4, flex=1),
@@ -107,7 +122,8 @@ class BJJtutor(toga.App):
                                 children=[toga.Button(text="New notes", 
                                         on_press= lambda w: self.show_page("new notes")
                                         )]) 
-        label = toga.Label('Notes and Discoveries')     
+        label = toga.Label('Notes and Discoveries',
+                           style=Pack(font_size=14, font_weight='bold'))     
 
             # container for all the previous training notes
         self.old_notes_box = toga.Box(id = "empty", style=Pack(direction=COLUMN, padding=8),
@@ -128,13 +144,14 @@ class BJJtutor(toga.App):
                             children=[toga.Label('Learning & Associations')])
     
     # switching the page
-    def show_page(self, name):
-          page = {
-                "profile": self.main_page, 
-                "diary": self.diary_page,
-                "learning": self.learning_page,
-                "new notes": self.newnotes_page
-          }[name]
+    def show_page(self, name, *init_vals):
+          routes = {
+                "profile":   lambda: self.main_page, 
+                "diary":     lambda: self.diary_page,
+                "learning":  lambda: self.learning_page,
+                "new notes": lambda: self.make_newnotes_page(*init_vals)
+          }
+          page = routes[name]()
           self.content_area.clear()
           self.content_area.add(page)
    
